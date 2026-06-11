@@ -1,0 +1,13 @@
+{
+  "name": "playwright-capture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/capture.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "playwright": "^1.54.1"
+  }
+}

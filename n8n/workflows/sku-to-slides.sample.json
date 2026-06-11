@@ -1,0 +1,163 @@
+{
+  "name": "SKU to Google Slides (Sample)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "sku-created",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "id": "Webhook_1",
+      "name": "Webhook SKU Created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.sku}}",
+              "operation": "notEmpty"
+            }
+          ]
+        }
+      },
+      "id": "If_1",
+      "name": "IF SKU not empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "sku",
+              "value": "={{$json.body.sku}}",
+              "type": "string"
+            },
+            {
+              "name": "requestId",
+              "value": "={{$json.body.requestId || $now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "Set_1",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://slides.googleapis.com/v1/presentations/{{$env.GOOGLE_PRESENTATION_ID}}:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [\n    {\n      \"duplicateObject\": {\n        \"objectId\": \"{{$env.GOOGLE_TEMPLATE_SLIDE_OBJECT_ID}}\",\n        \"objectIds\": {}\n      }\n    },\n    {\n      \"replaceAllText\": {\n        \"containsText\": {\n          \"text\": \"{{SKU_BODY}}\",\n          \"matchCase\": true\n        },\n        \"replaceText\": \"{{$json.sku}}\"\n      }\n    }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "HttpRequest_1",
+      "name": "Google Slides batchUpdate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 220],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "replace-credential-id",
+          "name": "Google OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"sku\": \"{{$json.sku}}\"\n}"
+      },
+      "id": "Respond_1",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={\n  \"status\": \"error\",\n  \"message\": \"SKU is empty\"\n}"
+      },
+      "id": "Respond_2",
+      "name": "Respond SKU Empty",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 420]
+    }
+  ],
+  "connections": {
+    "Webhook SKU Created": {
+      "main": [
+        [
+          {
+            "node": "IF SKU not empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF SKU not empty": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond SKU Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "Google Slides batchUpdate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Slides batchUpdate": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
